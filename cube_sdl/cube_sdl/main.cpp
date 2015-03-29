@@ -14,93 +14,120 @@
 #include <SDL2/SDL_opengl.h>
 #include <SDL2/SDL_ttf.h>
 
+#include <glm/glm.hpp>
+
 #include <string>
 #include <iostream>
+
+#ifdef DEBUG
+#define ASSERT(x) assert(x);
+#else
+#define ASSERT(x) x
+#endif
+
+GLenum __gl_err_code;
+#ifndef DEBUG
+#define ASSERT_GL( gl_code ) gl_code
+#else
+#define ASSERT_GL( gl_code ) do \
+{ \
+    while (glGetError() != GL_NO_ERROR) ; \
+        gl_code; \
+__gl_err_code = glGetError(); \
+ASSERT(__gl_err_code == GL_NO_ERROR); \
+} while(0)
+#endif
 
 using namespace std;
 
 SDL_Window *window = NULL;
 SDL_GLContext context = NULL;
-TTF_Font* font = NULL;
-SDL_Surface* surface = NULL;
 
-//OpenGL Objects
-GLuint vao;
+// OpenGL Objects
 GLuint vbo;
-GLuint texture;
+GLuint vao;
 
-//Shader Objects
+// Shader Objects
 GLuint program;
 GLuint vs;
 GLuint fs;
 
-//Sampler Object
-GLuint uniformSampler;
+// Sampler Object
+GLuint uniformColor;
+GLuint attributeCoord;
 
-
-//The shaders are identical to yours
-const string fragmentShaderString =
-"#version 330\n" // My laptop can't do OpenGL 3.3 so 3.0 will have to do
-"in vec2 texCoord;\n"
-"in vec4 fragColor;\n"
-"\n"
-"out vec4 finalColor;\n"
-"\n"
-"uniform sampler2D myTextureSampler;\n"
-"void main() {\n"
-"  finalColor = texture( myTextureSampler, texCoord ) * fragColor;\n"
-"}";
-
+// The shaders
 const string vertexShaderString =
-"#version 330\n"
-"\n"
-"in vec3 vert;\n"
-"in vec4 color;\n"
-"in vec2 texcoord;\n"
-"\n"
+"#version 330 \n"
+"in vec3 coord;               \n"
+"in vec4 color;        \n"
 "out vec4 fragColor;\n"
-"out vec2 texCoord;\n"
+"void main() {                       \n"
+"    fragColor = color; \n"
+"    gl_Position = vec4(coord, 1.0); \n"
+"}                                   \n";
 
-"void main() {\n"
-"  fragColor = color;\n"
-"  gl_Position = vec4(vert, 1);\n"
-"  texCoord = texcoord;\n"
-"}\n";
+const string fragmentShaderString =
+"#version 330\n"
+"in vec4 fragColor;\n"
+"out vec4 finalColor;\n"
+"void main() {              \n"
+"    finalColor = fragColor;  \n"
+"}                          \n";
 
-//Your vertices, but I changed alpha to 1.0f
+// The vertices
 const GLfloat vertices[] =
 {
-    //X    Y      Z     R     G     B     A     U    V
-    -1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.f, 1.f,
-    1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.f, 1.f,
-    -1.0f, -0.4f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.f, 0.f,
-    1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.f, 1.f,
-    1.0f, -0.4f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.f, 0.f,
-    -1.0f, -0.4f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.f, 0.f
+    //X   Y     Z     R     G     B     A
+    0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+    1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+    0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+    1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+    0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+    1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+    0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
 };
 
-int main(int argc, char* args[])
+const GLsizei screenWidth = 640;
+const GLsizei screenHeight = 480;
+
+void shaderLog(GLuint shader)
 {
+    int len = 0;
+    ASSERT_GL( glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len) );
     
+    if(len > 1)
+    {
+        auto msg = new char[len];
+        assert(msg);
+        
+        int written = 0;
+        ASSERT_GL( glGetShaderInfoLog(shader, len, &written, msg) );
+        std::cout << "shaderLog " << shader << " : " << msg << "\n\n";
+        delete[] msg;
+    }
+}
+
+void initSDL() {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
         std::cout << "SDL_Init Error: " << SDL_GetError() << std::endl;
-        return 1;
+        exit(1);
     }
     
     //Create Window and Context
-    window = SDL_CreateWindow("SDL Text with OpenG", 0, 0, 640, 480, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("SDL with OpenGL", 0, 0, screenWidth, screenHeight, SDL_WINDOW_OPENGL);
     
     //Set Core Context
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     
     context = SDL_GL_CreateContext(window);
-    
-    //Simple OpenGL State Settings
-    glViewport( 0.f, 0.f, 640.f, 480.f);
-    glClearColor( 0.f, 0.f, 0.f, 1.f);
-    
+}
+
+void initGL()
+{
     //Init Glew
     //Set glewExperimental for Core Context
     glewExperimental=true;
@@ -108,112 +135,129 @@ int main(int argc, char* args[])
     
     //Set Blending
     //Required so that the alpha channels show up from the surface
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    ASSERT_GL( glEnable(GL_BLEND) );
+    ASSERT_GL( glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA) );
     
-    glEnable(GL_DEPTH);
+    //Z-buffer
+    ASSERT_GL( glEnable(GL_DEPTH_TEST) );
     
-    
+    ASSERT_GL( glViewport( 0.f, 0.f, screenWidth, screenHeight) );
+    ASSERT_GL( glClearColor( 0.2f, 0.2f, 0.2f, 1.f) );
+}
+
+void initShaders() {
     //Create Shaders
     vs = glCreateShader(GL_VERTEX_SHADER);
     fs = glCreateShader(GL_FRAGMENT_SHADER);
     
     //Source Pointers
-    const GLchar* vsSource= &vertexShaderString[0];
+    const GLchar* vsSource = &vertexShaderString[0];
     const GLchar* fsSource = &fragmentShaderString[0];
     
     //Set Source
-    glShaderSource(vs, 1, &vsSource, NULL);
-    glShaderSource(fs, 1, &fsSource, NULL);
+    ASSERT_GL( glShaderSource(vs, 1, &vsSource, NULL) );
+    ASSERT_GL( glShaderSource(fs, 1, &fsSource, NULL) );
     
     //Compile Shaders
-    glCompileShader(fs);
-    glCompileShader(vs);
+    ASSERT_GL( glCompileShader(vs) );
+    ASSERT_GL( glCompileShader(fs) );
+
+    shaderLog(vs);
+    shaderLog(fs);
     
     //Create Shader Program
     program = glCreateProgram();
     
     //Attach Shaders to Program
-    glAttachShader(program, vs);
-    glAttachShader(program, fs);
-    
-    //No need for shaders anymore
-    glDeleteShader(vs);
-    glDeleteShader(fs);
+    ASSERT_GL( glAttachShader(program, vs) );
+    ASSERT_GL( glAttachShader(program, fs) );
     
     //Set Attribute Locations
-    glBindAttribLocation(program, 0, "vert");
-    glBindAttribLocation(program, 1, "color");
-    glBindAttribLocation(program, 2, "texcoord");
+    ASSERT_GL( glBindAttribLocation(program, 0, "coord") );
+    ASSERT_GL( glBindAttribLocation(program, 1, "color") );
     
     //Link Program
-    glLinkProgram(program);
+    ASSERT_GL( glLinkProgram(program) );
     
+    GLint status = GL_FALSE;
+    ASSERT_GL( glGetProgramiv(program, GL_LINK_STATUS, &status) );
+    if (status == GL_FALSE) {
+        GLint logLength = 0;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
+        
+        GLchar *log = (GLchar *)malloc(logLength);
+        glGetProgramInfoLog(program, logLength, &logLength, log);
+        
+        throw std::runtime_error("GL program link error" + string(log));
+    }
+    
+    //No need for shaders anymore
+    ASSERT_GL( glDeleteShader(vs) );
+    ASSERT_GL( glDeleteShader(fs) );
+    
+}
+
+void initVBO() {
     //Setup VAO and VBO
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
+    ASSERT_GL( glGenVertexArrays(1, &vao) );
+    ASSERT_GL( glGenBuffers(1, &vbo) );
+
+    ASSERT_GL( glBindVertexArray(vao) );
+    ASSERT_GL( glBindBuffer(GL_ARRAY_BUFFER, vbo) );
     
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    ASSERT_GL( glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 7 * 8, vertices, GL_STATIC_DRAW) );
+
+    ASSERT_GL( glEnableVertexAttribArray(0) );
+    ASSERT_GL( glEnableVertexAttribArray(1) );
     
-    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 9 * 6, vertices, GL_STATIC_DRAW);
+    ASSERT_GL( glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), NULL) );
+    ASSERT_GL( glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat),(GLvoid*)(3*sizeof(GLfloat))) );
+}
+
+void freeShader()
+{
+    ASSERT_GL( glUseProgram(0) );
+    ASSERT_GL( glDeleteProgram(program) );
+}
+
+void freeVBO()
+{
+    ASSERT_GL( glBindBuffer(GL_ARRAY_BUFFER, 0) );
+    ASSERT_GL( glDeleteBuffers(1, &vbo) );
+}
+
+int main(int argc, char* args[])
+{
+    initSDL();
+    initGL();
+    initShaders();
+    initVBO();
     
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
+    bool done = 0;
     
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), NULL);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat),(GLvoid*)(3*sizeof(GLfloat)));
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat),(GLvoid*)(7*sizeof(GLfloat)));
-    
-    //Init TTF
-    TTF_Init();
-    
-    //Open Font
-    font = TTF_OpenFont("Ubuntu-Regular.ttf", 30);
-    
-    SDL_Color color = {0, 255, 255, 255};
-    
-    //Create Surface
-    surface = TTF_RenderUTF8_Blended(font, "This is TEXT!", color);
-    
-    //Your format checker
-    GLenum format = (surface->format->BytesPerPixel==3)?GL_RGB:GL_RGBA;
-    
-    //Create OpenGL Texture
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D( GL_TEXTURE_2D, 0, format, surface->w, surface->h, 0,
-                 format, GL_UNSIGNED_BYTE, surface->pixels);
-    
-    //Set Some basic parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    
-    //Set up Sampler
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    
-    uniformSampler = glGetUniformLocation(program, "myTextureSampler");
-    //It defaults to using GL_TEXTURE0, so it's not necessary to set it
-    //in this program it's generally a good idea.
-    
-    //--------------------------------------------------------------------------------------
-    // DRAW STAGE
-    //--------------------------------------------------------------------------------------
-    
-    glUseProgram(program);
-    
-    //glBindVertexArray(vao); - still in use
-    
-    glClear(GL_COLOR_BUFFER_BIT);
-    
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    
-    SDL_GL_SwapWindow(window);
-    
-    //Sleep for 2s before closing
-    SDL_Delay(2000);
+    // Draw
+    while (!done) {
+        ASSERT_GL( glUseProgram(program) );
+        
+        ASSERT_GL( glClear(GL_COLOR_BUFFER_BIT) );
+        ASSERT_GL( glClear(GL_DEPTH_BUFFER_BIT) );
+        
+        ASSERT_GL( glBindVertexArray(vao) );
+
+        ASSERT_GL( glBindBuffer(GL_ARRAY_BUFFER, vbo) );
+        
+        ASSERT_GL( glDrawArrays(GL_TRIANGLES, 0, 8) );
+        
+        ASSERT_GL( glBindBuffer(GL_ARRAY_BUFFER, 0) );
+        
+        ASSERT_GL( glBindVertexArray(0) );
+        
+        ASSERT_GL( glUseProgram(0) );
+        
+        ASSERT_GL( SDL_GL_SwapWindow(window) );
+        
+        SDL_Delay(20);
+    }
     
     SDL_DestroyWindow(window);
     SDL_Quit();
