@@ -26,3 +26,6 @@
 *.exe
 *.out
 *.app
+cube_sdl/cube_sdl.xcodeproj/project.xcworkspace/xcuserdata
+cube_sdl/build
+cube_sdl/cube_sdl.xcodeproj/xcuserdata
