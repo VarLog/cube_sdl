@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		5DA598BE1AC84501009D7227 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5DA598BD1AC84501009D7227 /* main.cpp */; };
 		5DA598C51AC84981009D7227 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DA598C41AC84981009D7227 /* OpenGL.framework */; };
+		5DA598CA1AC8B0C2009D7227 /* RendererOpenGL2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5DA598C81AC8B0C2009D7227 /* RendererOpenGL2.cpp */; };
+		5DA598CE1AC8B404009D7227 /* Controller.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5DA598CC1AC8B404009D7227 /* Controller.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -27,6 +29,12 @@
 		5DA598BA1AC84501009D7227 /* cube_sdl */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cube_sdl; sourceTree = BUILT_PRODUCTS_DIR; };
 		5DA598BD1AC84501009D7227 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5DA598C41AC84981009D7227 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		5DA598C71AC8AE8F009D7227 /* IRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IRenderer.h; sourceTree = "<group>"; };
+		5DA598C81AC8B0C2009D7227 /* RendererOpenGL2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RendererOpenGL2.cpp; sourceTree = "<group>"; };
+		5DA598C91AC8B0C2009D7227 /* RendererOpenGL2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RendererOpenGL2.h; sourceTree = "<group>"; };
+		5DA598CB1AC8B1B7009D7227 /* Defs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Defs.h; sourceTree = "<group>"; };
+		5DA598CC1AC8B404009D7227 /* Controller.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Controller.cpp; sourceTree = "<group>"; };
+		5DA598CD1AC8B404009D7227 /* Controller.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Controller.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,7 +69,13 @@
 		5DA598BC1AC84501009D7227 /* cube_sdl */ = {
 			isa = PBXGroup;
 			children = (
+				5DA598C71AC8AE8F009D7227 /* IRenderer.h */,
 				5DA598BD1AC84501009D7227 /* main.cpp */,
+				5DA598C81AC8B0C2009D7227 /* RendererOpenGL2.cpp */,
+				5DA598C91AC8B0C2009D7227 /* RendererOpenGL2.h */,
+				5DA598CB1AC8B1B7009D7227 /* Defs.h */,
+				5DA598CC1AC8B404009D7227 /* Controller.cpp */,
+				5DA598CD1AC8B404009D7227 /* Controller.h */,
 			);
 			path = cube_sdl;
 			sourceTree = "<group>";
@@ -122,6 +136,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5DA598CA1AC8B0C2009D7227 /* RendererOpenGL2.cpp in Sources */,
+				5DA598CE1AC8B404009D7227 /* Controller.cpp in Sources */,
 				5DA598BE1AC84501009D7227 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -260,6 +276,7 @@
 				5DA598C31AC84501009D7227 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
