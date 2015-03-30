@@ -32,9 +32,29 @@ RendererOpenGL2::RendererOpenGL2(const unsigned int screenWidth, const unsigned 
                 init();
             }
             
+            ASSERT_GL( glClear(GL_COLOR_BUFFER_BIT) );
+            ASSERT_GL( glClear(GL_DEPTH_BUFFER_BIT) );
             
-            ASSERT_GL( glDrawArrays(GL_TRIANGLES, 0, 6) );
+            ASSERT_GL( glUseProgram(mProgram) );
             
+            ASSERT_GL( glEnableVertexAttribArray(mVertexPosition) );
+            
+            ASSERT_GL( glBindBuffer(GL_ARRAY_BUFFER, mVbo) );
+            ASSERT_GL( glVertexAttribPointer(
+                                  mVertexPosition,    // The attribute we want to configure
+                                  3,                  // size
+                                  GL_FLOAT,           // type
+                                  GL_FALSE,           // normalized?
+                                  0,                  // stride
+                                  (void*)0            // array buffer offset
+                                  ) );
+            
+            // Draw the triangle !
+            ASSERT_GL( glDrawArrays(GL_TRIANGLES, 0, 3) ); // 3 indices starting at 0 -> 1 triangle
+            
+            ASSERT_GL( glDisableVertexAttribArray(mVertexPosition) );
+            
+
             ASSERT_GL( SDL_GL_SwapWindow(mWindow) );
             
             SDL_Delay(200);
@@ -51,11 +71,6 @@ void RendererOpenGL2::init() {
     initGL();
     initShaders();
     initVBO();
-    
-    ASSERT_GL( glClear(GL_COLOR_BUFFER_BIT) );
-    ASSERT_GL( glClear(GL_DEPTH_BUFFER_BIT) );
-    
-    ASSERT_GL( glUseProgram(mProgram) );
     
     mIsInit = true;
 }
@@ -84,26 +99,6 @@ void RendererOpenGL2::stopRender() {
     mIsRendering = false;
 }
 
-
-void RendererOpenGL2::shaderLog(GLuint shader)
-{
-    int len = 0;
-    assert(1);
-    
-    ASSERT_GL( glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &len) );
-    
-    if(len > 1)
-    {
-        auto msg = new char[len];
-        assert(msg);
-        
-        int written = 0;
-        ASSERT_GL( glGetShaderInfoLog(shader, len, &written, msg) );
-        std::cout << "shaderLog " << shader << " : " << msg << "\n\n";
-        delete[] msg;
-    }
-}
-
 void RendererOpenGL2::initSDL() {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
         std::cout << "SDL_Init Error: " << SDL_GetError() << std::endl;
@@ -116,7 +111,6 @@ void RendererOpenGL2::initSDL() {
     //Set Core Context
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     
     mContext = SDL_GL_CreateContext(mWindow);
 }
@@ -143,53 +137,46 @@ void RendererOpenGL2::initGL()
 void RendererOpenGL2::initShaders() {
     
     const std::string vertexShaderString =
-    "#version 330 \n"
-    "in vec3 coord;               \n"
-    "in vec4 color;        \n"
-    "out vec4 fragColor;\n"
-    "void main() {                       \n"
-    "    fragColor = color; \n"
-    "    gl_Position = vec4(coord, 1.0); \n"
-    "}                                   \n";
+    "#version 120\n"
+    "// Input vertex data.\n"
+    "attribute vec3 vertexPosition_modelspace;\n"
+    "\n"
+    "void main(){\n"
+    "\n"
+    "    gl_Position = vec4(vertexPosition_modelspace, 1.0);\n"
+    "\n"
+    "}\n";
     
     const std::string fragmentShaderString =
-    "#version 330\n"
-    "in vec4 fragColor;\n"
-    "out vec4 finalColor;\n"
-    "void main() {              \n"
-    "    finalColor = fragColor;  \n"
-    "}                          \n";
+    "#version 120\n"
+    "\n"
+    "void main()\n"
+    "{\n"
+    "\n"
+    "    // Output color = red\n"
+    "    gl_FragColor = vec4(1,0,0,1);\n"
+    "\n"
+    "}\n";
 
     mProgram = LoadShaders(vertexShaderString.c_str(), fragmentShaderString.c_str());
 }
 
 void RendererOpenGL2::initVBO() {
-    //Setup VAO and VBO
-    ASSERT_GL( glGenVertexArrays(1, &mVao) );
-    ASSERT_GL( glGenBuffers(1, &mVbo) );
     
-    ASSERT_GL( glBindVertexArray(mVao) );
+    mVertexPosition = glGetAttribLocation(mProgram, "vertexPosition_modelspace");
+    
+    //Setup VBO
+    ASSERT_GL( glGenBuffers(1, &mVbo) );
     ASSERT_GL( glBindBuffer(GL_ARRAY_BUFFER, mVbo) );
     
     // The vertices
-    const GLfloat vertices[] =
-    {
-        //X   Y     Z     R     G     B     A
-        0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-        1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-        0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+    const GLfloat vertices[] = {
+        -1.0f, -1.0f, 0.0f,
+        1.0f, -1.0f, 0.0f,
+        0.0f,  1.0f, 0.0f,
     };
     
-    ASSERT_GL( glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 7 * 6, vertices, GL_STATIC_DRAW) );
-    
-    ASSERT_GL( glEnableVertexAttribArray(0) );
-    ASSERT_GL( glEnableVertexAttribArray(1) );
-    
-    ASSERT_GL( glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), NULL) );
-    ASSERT_GL( glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat),(GLvoid*)(3*sizeof(GLfloat))) );
+    ASSERT_GL( glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW) );
 }
 
 void RendererOpenGL2::freeShader()

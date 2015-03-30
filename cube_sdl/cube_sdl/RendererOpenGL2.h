@@ -28,10 +28,12 @@ namespace Cube {
         
         // OpenGL Objects
         GLuint mVbo;
-        GLuint mVao;
         
         // Shader Objects
         GLuint mProgram;
+        
+        // Get a handle for vertex buffer
+        GLuint mVertexPosition;
         
         const GLsizei mScreenWidth = 640;
         const GLsizei mScreenHeight = 480;
