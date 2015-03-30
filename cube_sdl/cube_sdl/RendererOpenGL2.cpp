@@ -3,8 +3,9 @@
 //  cube_sdl
 //
 //  Created by Maxim Fedorenko on 30.03.15.
-//  Copyright (c) 2015 Maxim Fedorenko. All rights reserved.
 //
+
+// The OpenGL templates from here: <http://www.opengl-tutorial.org/>
 
 #include <string>
 #include <iostream>
@@ -50,7 +51,7 @@ RendererOpenGL2::RendererOpenGL2(const unsigned int screenWidth, const unsigned 
                                   ) );
             
             // Draw the triangle !
-            ASSERT_GL( glDrawArrays(GL_TRIANGLES, 0, 3) ); // 3 indices starting at 0 -> 1 triangle
+            ASSERT_GL( glDrawArrays(GL_TRIANGLES, 0, 3) );
             
             ASSERT_GL( glDisableVertexAttribArray(mVertexPosition) );
             
@@ -108,7 +109,7 @@ void RendererOpenGL2::initSDL() {
     //Create Window and Context
     mWindow = SDL_CreateWindow("SDL with OpenGL", 0, 0, mScreenWidth, mScreenHeight, SDL_WINDOW_OPENGL);
     
-    //Set Core Context
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     
