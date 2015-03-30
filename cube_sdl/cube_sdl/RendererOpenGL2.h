@@ -32,8 +32,6 @@ namespace Cube {
         
         // Shader Objects
         GLuint mProgram;
-        GLuint mVs;
-        GLuint mFs;
         
         const GLsizei mScreenWidth = 640;
         const GLsizei mScreenHeight = 480;
@@ -48,7 +46,8 @@ namespace Cube {
         
         bool mIsInit = false;
         void init();
-        
+        void deinit();
+
         bool mIsRendering = false;
         
         bool mDone = false;

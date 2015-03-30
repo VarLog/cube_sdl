@@ -3,7 +3,6 @@
 //  cube_sdl
 //
 //  Created by Maxim Fedorenko on 30.03.15.
-//  Copyright (c) 2015 Maxim Fedorenko. All rights reserved.
 //
 
 #ifndef cube_sdl_IRenderer_h

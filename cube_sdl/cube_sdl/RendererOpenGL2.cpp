@@ -12,6 +12,7 @@
 #include "Defs.h"
 #include "RendererOpenGL2.h"
 
+#include "shader.h"
 
 using namespace Cube;
 
@@ -39,6 +40,7 @@ RendererOpenGL2::RendererOpenGL2(const unsigned int screenWidth, const unsigned 
             SDL_Delay(200);
         }
 
+        deinit();
     };
     std::thread thread(f);
     mRenderThread = std::move(thread);
@@ -58,14 +60,16 @@ void RendererOpenGL2::init() {
     mIsInit = true;
 }
 
-RendererOpenGL2::~RendererOpenGL2() {
-    mDone = true;
-    mRenderThread.join();
-    
+void RendererOpenGL2::deinit() {
     freeVBO();
     freeShader();
     SDL_DestroyWindow(mWindow);
     SDL_Quit();
+}
+
+RendererOpenGL2::~RendererOpenGL2() {
+    mDone = true;
+    mRenderThread.join();
 }
 
 void RendererOpenGL2::setColor( float r, float g, float b, float a ) {
@@ -110,8 +114,8 @@ void RendererOpenGL2::initSDL() {
     mWindow = SDL_CreateWindow("SDL with OpenGL", 0, 0, mScreenWidth, mScreenHeight, SDL_WINDOW_OPENGL);
     
     //Set Core Context
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     
     mContext = SDL_GL_CreateContext(mWindow);
@@ -137,9 +141,6 @@ void RendererOpenGL2::initGL()
 }
 
 void RendererOpenGL2::initShaders() {
-    //Create Shaders
-    mVs = glCreateShader(GL_VERTEX_SHADER);
-    mFs = glCreateShader(GL_FRAGMENT_SHADER);
     
     const std::string vertexShaderString =
     "#version 330 \n"
@@ -159,52 +160,7 @@ void RendererOpenGL2::initShaders() {
     "    finalColor = fragColor;  \n"
     "}                          \n";
 
-    
-    //Source Pointers
-    const GLchar* vsSource = &vertexShaderString[0];
-    const GLchar* fsSource = &fragmentShaderString[0];
-    
-    //Set Source
-    ASSERT_GL( glShaderSource(mVs, 1, &vsSource, NULL) );
-    ASSERT_GL( glShaderSource(mFs, 1, &fsSource, NULL) );
-    
-    //Compile Shaders
-    ASSERT_GL( glCompileShader(mVs) );
-    ASSERT_GL( glCompileShader(mFs) );
-    
-    shaderLog(mVs);
-    shaderLog(mFs);
-    
-    //Create Shader Program
-    mProgram = glCreateProgram();
-    
-    //Attach Shaders to Program
-    ASSERT_GL( glAttachShader(mProgram, mVs) );
-    ASSERT_GL( glAttachShader(mProgram, mFs) );
-    
-    //Set Attribute Locations
-    ASSERT_GL( glBindAttribLocation(mProgram, 0, "coord") );
-    ASSERT_GL( glBindAttribLocation(mProgram, 1, "color") );
-    
-    //Link Program
-    ASSERT_GL( glLinkProgram(mProgram) );
-    
-    GLint status = GL_FALSE;
-    ASSERT_GL( glGetProgramiv(mProgram, GL_LINK_STATUS, &status) );
-    if (status == GL_FALSE) {
-        GLint logLength = 0;
-        glGetProgramiv(mProgram, GL_INFO_LOG_LENGTH, &logLength);
-        
-        GLchar *log = (GLchar *)malloc(logLength);
-        glGetProgramInfoLog(mProgram, logLength, &logLength, log);
-        
-        throw std::runtime_error("GL program link error: " + std::string(log));
-    }
-    
-    //No need for shaders anymore
-    ASSERT_GL( glDeleteShader(mVs) );
-    ASSERT_GL( glDeleteShader(mFs) );
-    
+    mProgram = LoadShaders(vertexShaderString.c_str(), fragmentShaderString.c_str());
 }
 
 void RendererOpenGL2::initVBO() {
